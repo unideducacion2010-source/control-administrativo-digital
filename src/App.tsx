@@ -9,7 +9,7 @@ import { ClientesTab } from './components/ClientesTab';
 import { GastosTab } from './components/GastosTab';
 import { DriveSheetsTab } from './components/DriveSheetsTab';
 import { initialSales, initialInventory, initialExpenses, initialPurchases, initialClients } from './data/initialData';
-import { SaleItem, InventoryItem, ExpenseItem, PurchaseItem, ClientItem, DriveConfig } from './types';
+import { SaleItem, InventoryItem, ExpenseItem, PurchaseItem, ClientItem, DriveConfig, AdminCredentials } from './types';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,6 +21,22 @@ export default function App() {
   const [clients, setClients] = useState<ClientItem[]>(initialClients);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
+  const [adminCredentials, setAdminCredentials] = useState<AdminCredentials>(() => {
+    const saved = localStorage.getItem('app_admin_credentials');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return {
+      username: 'admin',
+      password: 'admin123',
+      lastUpdated: 'Por defecto',
+    };
+  });
+
   const [driveConfig, setDriveConfig] = useState<DriveConfig>(() => {
     const saved = localStorage.getItem('app_drive_config');
     if (saved) {
@@ -44,6 +60,10 @@ export default function App() {
   });
 
   useEffect(() => {
+    localStorage.setItem('app_admin_credentials', JSON.stringify(adminCredentials));
+  }, [adminCredentials]);
+
+  useEffect(() => {
     localStorage.setItem('app_drive_config', JSON.stringify(driveConfig));
   }, [driveConfig]);
 
@@ -53,7 +73,7 @@ export default function App() {
   };
 
   if (!isLoggedIn) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} adminCredentials={adminCredentials} />;
   }
 
   return (
@@ -117,6 +137,8 @@ export default function App() {
             inventory={inventory}
             clients={clients}
             expenses={expenses}
+            adminCredentials={adminCredentials}
+            setAdminCredentials={setAdminCredentials}
           />
         )}
       </main>

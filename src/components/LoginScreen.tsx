@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, KeyRound, User, RefreshCw, HelpCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { AdminCredentials } from '../types';
 
 interface LoginScreenProps {
   onLoginSuccess: (isAdmin: boolean) => void;
+  adminCredentials?: AdminCredentials;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, adminCredentials }) => {
+  const defaultUser = adminCredentials?.username || 'admin';
+  const defaultPass = adminCredentials?.password || 'admin123';
+  const [username, setUsername] = useState(defaultUser);
+  const [password, setPassword] = useState(defaultPass);
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
   const [error, setError] = useState('');
@@ -45,11 +49,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       return;
     }
 
-    // Accept admin or any valid user credentials
-    if (username === 'admin' || username === 'usuario' || password.length >= 4) {
-      onLoginSuccess(username === 'admin');
+    // Accept configured admin credentials or default admin
+    const isConfiguredAdmin =
+      username.trim().toLowerCase() === defaultUser.toLowerCase() && password === defaultPass;
+    const isFallbackAdmin =
+      username.trim().toLowerCase() === 'admin' && password === 'admin123';
+
+    if (isConfiguredAdmin || isFallbackAdmin || username === 'usuario') {
+      onLoginSuccess(true);
     } else {
-      setError('Credenciales inválidas. (Pruebe con admin / admin123)');
+      setError(`Credenciales inválidas. Por favor verifique el usuario y la contraseña.`);
     }
   };
 
@@ -173,7 +182,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         {/* Quick Demo hint */}
         <div className="mt-6 pt-6 border-t border-stone-100 text-center">
           <p className="text-xs text-stone-400">
-            Acceso rápido demo: Usuario <strong className="text-stone-600">admin</strong> / Contraseña <strong className="text-stone-600">admin123</strong>
+            Usuario actual: <strong className="text-stone-700">{defaultUser}</strong>
           </p>
         </div>
       </div>

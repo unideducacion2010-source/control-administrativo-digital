@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { DriveConfig, SaleItem, PurchaseItem, InventoryItem, ClientItem, ExpenseItem, BackupFolder } from '../types';
+import {
+  DriveConfig,
+  SaleItem,
+  PurchaseItem,
+  InventoryItem,
+  ClientItem,
+  ExpenseItem,
+  BackupFolder,
+  AdminCredentials,
+} from '../types';
 import {
   Cloud,
   CheckCircle2,
@@ -17,7 +26,14 @@ import {
   ShieldCheck,
   Edit3,
   Layers,
-  ChevronRight
+  ChevronRight,
+  KeyRound,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  UserCheck,
+  X
 } from 'lucide-react';
 
 interface DriveSheetsTabProps {
@@ -28,6 +44,8 @@ interface DriveSheetsTabProps {
   inventory?: InventoryItem[];
   clients?: ClientItem[];
   expenses?: ExpenseItem[];
+  adminCredentials?: AdminCredentials;
+  setAdminCredentials?: React.Dispatch<React.SetStateAction<AdminCredentials>>;
 }
 
 export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
@@ -38,6 +56,8 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
   inventory = [],
   clients = [],
   expenses = [],
+  adminCredentials,
+  setAdminCredentials,
 }) => {
   const [emailInput, setEmailInput] = useState(driveConfig.accountEmail || '');
   const [isCreating, setIsCreating] = useState(false);
@@ -46,6 +66,16 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(!driveConfig.isConnected);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Admin credentials modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newUsername, setNewUsername] = useState(adminCredentials?.username || 'admin');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswordText, setShowPasswordText] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  const currentAdminUser = adminCredentials?.username || 'admin';
 
   const creationSteps = [
     'Verificando cuenta de Google del usuario...',
@@ -219,6 +249,47 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
     showToast('Copia de seguridad completa descargada exitosamente.');
   };
 
+  // Open modal to update admin credentials
+  const handleOpenCredentialsModal = () => {
+    setNewUsername(currentAdminUser);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setShowPasswordModal(true);
+  };
+
+  // Submit updated admin credentials
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (!newUsername.trim()) {
+      setPasswordError('El nombre de usuario no puede estar vacío.');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setPasswordError('La contraseña debe tener al menos 4 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden. Verifíquelas.');
+      return;
+    }
+
+    if (setAdminCredentials) {
+      setAdminCredentials({
+        username: newUsername.trim(),
+        password: newPassword,
+        lastUpdated: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+    }
+
+    setShowPasswordModal(false);
+    showToast(`¡Usuario y contraseña del Administrador cambiados con éxito! Nuevo usuario: ${newUsername.trim()}`);
+  };
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
       {/* Toast Notification */}
@@ -264,6 +335,37 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Admin Security & Credentials Quick Banner */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-stone-100 border border-amber-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-600/20">
+            <KeyRound className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-stone-900 text-base">Seguridad del Administrador</h3>
+              <span className="bg-amber-100 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-300">
+                Acceso al Sistema
+              </span>
+            </div>
+            <p className="text-xs text-stone-600 mt-0.5">
+              Usuario admin actual: <strong className="text-stone-900 font-bold">{currentAdminUser}</strong> • Contraseña protegida
+              {adminCredentials?.lastUpdated && ` (Actualizado: ${adminCredentials.lastUpdated})`}
+            </p>
+          </div>
+        </div>
+
+        {/* The requested button to change admin username and password */}
+        <button
+          type="button"
+          onClick={handleOpenCredentialsModal}
+          className="w-full sm:w-auto px-5 py-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-amber-600/25 transition flex items-center justify-center gap-2 shrink-0"
+        >
+          <KeyRound className="w-4 h-4 text-amber-200" />
+          <span>Cambiar Usuario y Contraseña del Admin</span>
+        </button>
       </div>
 
       {/* Primary Section: Email Input Box & Create Folders / Tables Action */}
@@ -709,6 +811,121 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
           >
             Desconectar o Cambiar de Cuenta
           </button>
+        </div>
+      )}
+
+      {/* Modal to Change Admin Username and Password */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 animate-in fade-in zoom-in duration-200 relative">
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
+              title="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-stone-900">Credenciales del Administrador</h3>
+                <p className="text-xs text-stone-500">Cambie el usuario y la contraseña de inicio de sesión</p>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full shrink-0"></span>
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCredentials} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Nuevo Nombre de Usuario Administrador</span>
+                </label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  required
+                  placeholder="Ej. admin_principal"
+                  className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-stone-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Nueva Contraseña</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswordText ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    placeholder="Mínimo 4 caracteres"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-stone-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordText(!showPasswordText)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1"
+                    title={showPasswordText ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Confirmar Nueva Contraseña</span>
+                </label>
+                <input
+                  type={showPasswordText ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Repita la nueva contraseña"
+                  className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-stone-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1">
+                  <UserCheck className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Nota de seguridad:</span>
+                </p>
+                <p>
+                  Al guardar, estas nuevas credenciales se aplicarán inmediatamente para los próximos inicios de sesión en este dispositivo y cualquier otro donde abra la aplicación.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1 py-3 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl text-sm transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm shadow-md shadow-amber-600/25 transition active:scale-95"
+                >
+                  Guardar Nuevas Credenciales
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

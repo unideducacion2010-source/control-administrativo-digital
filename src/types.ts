@@ -83,3 +83,10 @@ export interface DriveConfig {
   autoSync: boolean;
   foldersCreated?: BackupFolder[];
 }
+
+export interface AdminCredentials {
+  username: string;
+  password: string;
+  lastUpdated?: string;
+}
+
