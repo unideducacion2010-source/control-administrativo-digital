@@ -143,8 +143,8 @@ export default function App() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-amber-100 py-4 text-center text-xs text-stone-500">
-        Control Administrativo © 2026 Todos los derechos reservados.
+      <footer className="bg-white border-t border-amber-100 py-4 text-center text-xs text-stone-500 font-medium">
+        © 2026 Control Administrativo. Todos los derechos de autor reservados.
       </footer>
     </div>
   );

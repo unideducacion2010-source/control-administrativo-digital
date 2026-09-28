@@ -178,10 +178,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, adminC
           </button>
         </form>
 
-        {/* Quick Demo hint */}
+        {/* Copyright notice */}
         <div className="mt-6 pt-6 border-t border-stone-100 text-center">
-          <p className="text-xs text-stone-400">
-            Usuario actual: <strong className="text-stone-700">{defaultUser}</strong>
+          <p className="text-xs text-stone-500 font-medium">
+            © 2026 Derechos de autor reservados
           </p>
         </div>
       </div>
