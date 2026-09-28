@@ -1,0 +1,8 @@
+{
+  "name": "Control de Ganancias y Administración",
+  "description": "Sistema administrativo móvil y de escritorio para control de ganancias, ventas, inventario y gastos con sincronización en Google Drive y Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
