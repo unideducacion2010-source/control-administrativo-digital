@@ -91,9 +91,7 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar esta venta?')) {
-      setSales(sales.filter(s => s.id !== id));
-    }
+    setSales(sales.filter(s => s.id !== id));
   };
 
   const filteredSales = sales.filter(s => 

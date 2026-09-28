@@ -39,9 +39,7 @@ export const GastosTab: React.FC<GastosTabProps> = ({ expenses, setExpenses }) =
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este gasto?')) {
-      setExpenses(expenses.filter(e => e.id !== id));
-    }
+    setExpenses(expenses.filter(e => e.id !== id));
   };
 
   const filteredExpenses = expenses.filter(e =>

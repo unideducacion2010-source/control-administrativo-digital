@@ -69,9 +69,7 @@ export const InventarioTab: React.FC<InventarioTabProps> = ({ inventory, setInve
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este producto del inventario?')) {
-      setInventory(inventory.filter(i => i.id !== id));
-    }
+    setInventory(inventory.filter(i => i.id !== id));
   };
 
   const filteredInventory = inventory.filter(i =>

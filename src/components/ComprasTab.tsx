@@ -84,9 +84,7 @@ export const ComprasTab: React.FC<ComprasTabProps> = ({ purchases, setPurchases,
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este registro de compra?')) {
-      setPurchases(purchases.filter(p => p.id !== id));
-    }
+    setPurchases(purchases.filter(p => p.id !== id));
   };
 
   const filteredPurchases = purchases.filter(p =>

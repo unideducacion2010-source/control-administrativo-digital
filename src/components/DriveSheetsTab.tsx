@@ -95,7 +95,7 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
   const handleCreateStructure = (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailInput.trim() || !emailInput.includes('@')) {
-      alert('Por favor ingrese un correo de Google válido (ejemplo: usuario@gmail.com)');
+      showToast('Por favor ingrese un correo de Google válido (ejemplo: usuario@gmail.com)');
       return;
     }
 
@@ -194,19 +194,18 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
   };
 
   const handleDisconnect = () => {
-    if (confirm('¿Desea desconectar la cuenta actual y cambiar la configuración de respaldo?')) {
-      setDriveConfig((prev) => ({
-        ...prev,
-        isConnected: false,
-        lastSynced: null,
-      }));
-      setIsEditingEmail(true);
-    }
+    setDriveConfig((prev) => ({
+      ...prev,
+      isConnected: false,
+      lastSynced: null,
+    }));
+    setIsEditingEmail(true);
+    showToast('Cuenta de Google desvinculada.');
   };
 
   const downloadTableCSV = (tableName: string, data: any[]) => {
     if (!data || data.length === 0) {
-      alert(`No hay datos registrados en la tabla de ${tableName} para exportar.`);
+      showToast(`No hay datos registrados en la tabla de ${tableName} para exportar.`);
       return;
     }
 
@@ -439,6 +438,13 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600">
                 <span className="font-semibold text-stone-700">Sugerencias rápidas:</span>
+                <button
+                  type="button"
+                  onClick={() => setEmailInput('mexicoartesanal9@gmail.com')}
+                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 font-semibold rounded-lg text-amber-900 transition"
+                >
+                  mexicoartesanal9@gmail.com
+                </button>
                 <button
                   type="button"
                   onClick={() => setEmailInput('unideducacion2010@gmail.com')}

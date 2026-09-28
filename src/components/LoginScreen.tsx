@@ -70,7 +70,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, adminC
       setShowRecovery(false);
       setRecoverySent(false);
       setRecoveryEmail('');
-      alert('Se han enviado las instrucciones de recuperación a su correo.');
     }, 2000);
   };
 

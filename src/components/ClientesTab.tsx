@@ -43,9 +43,7 @@ export const ClientesTab: React.FC<ClientesTabProps> = ({ clients, setClients })
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('¿Está seguro de eliminar este cliente?')) {
-      setClients(clients.filter(c => c.id !== id));
-    }
+    setClients(clients.filter(c => c.id !== id));
   };
 
   const filteredClients = clients.filter(c =>
