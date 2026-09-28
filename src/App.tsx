@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LoginScreen } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { ResumenTab } from './components/ResumenTab';
@@ -21,13 +21,31 @@ export default function App() {
   const [clients, setClients] = useState<ClientItem[]>(initialClients);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
-  const [driveConfig, setDriveConfig] = useState<DriveConfig>({
-    isConnected: true,
-    accountEmail: 'admin@negocio.com',
-    spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-    lastSynced: 'Hace 5 minutos',
-    autoSync: true,
+  const [driveConfig, setDriveConfig] = useState<DriveConfig>(() => {
+    const saved = localStorage.getItem('app_drive_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // fallback
+      }
+    }
+    return {
+      isConnected: false,
+      accountEmail: '',
+      spreadsheetId: '',
+      spreadsheetUrl: '',
+      folderUrl: '',
+      rootFolderName: '',
+      lastSynced: null,
+      autoSync: true,
+      foldersCreated: [],
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('app_drive_config', JSON.stringify(driveConfig));
+  }, [driveConfig]);
 
   const handleLoginSuccess = (adminStatus: boolean) => {
     setIsAdmin(adminStatus);
@@ -94,6 +112,11 @@ export default function App() {
           <DriveSheetsTab
             driveConfig={driveConfig}
             setDriveConfig={setDriveConfig}
+            sales={sales}
+            purchases={purchases}
+            inventory={inventory}
+            clients={clients}
+            expenses={expenses}
           />
         )}
       </main>

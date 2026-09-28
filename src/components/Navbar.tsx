@@ -35,8 +35,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onLogou
               <h1 className="text-base sm:text-lg font-bold text-stone-800 leading-tight">Control de Ganancias</h1>
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs text-stone-500 font-medium">
-                  {driveConfig.isConnected ? 'Sincronizado con Sheets' : 'Modo local activo'}
+                <span className="text-xs text-stone-500 font-medium truncate max-w-[180px] sm:max-w-xs">
+                  {driveConfig.isConnected
+                    ? `Google: ${driveConfig.accountEmail}`
+                    : 'Modo local (Sin vincular a Drive)'}
                 </span>
               </div>
             </div>

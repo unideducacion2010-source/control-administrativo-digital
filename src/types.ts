@@ -62,10 +62,24 @@ export interface ExpenseItem {
   notas: string;
 }
 
+export interface BackupFolder {
+  id: string;
+  name: string;
+  type: 'folder' | 'sheet';
+  url: string;
+  itemsCount?: number;
+  lastUpdated: string;
+  description: string;
+}
+
 export interface DriveConfig {
   isConnected: boolean;
   accountEmail: string;
   spreadsheetId: string;
+  spreadsheetUrl?: string;
+  folderUrl?: string;
+  rootFolderName?: string;
   lastSynced: string | null;
   autoSync: boolean;
+  foldersCreated?: BackupFolder[];
 }
