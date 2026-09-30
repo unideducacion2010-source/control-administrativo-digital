@@ -16,6 +16,7 @@ import {
   ExpenseItem,
   BackupFolder,
 } from '../types';
+import { deduplicateById } from '../utils/antiRedundancy';
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
@@ -179,7 +180,11 @@ export async function syncAllDataToSheets(
   const token = await getAccessToken();
   if (!token) throw new Error('No hay sesión de Google activa');
 
-  const { sales, purchases, inventory, clients, expenses } = payload;
+  const sales = deduplicateById(payload.sales || []);
+  const purchases = deduplicateById(payload.purchases || []);
+  const inventory = deduplicateById(payload.inventory || []);
+  const clients = deduplicateById(payload.clients || []);
+  const expenses = deduplicateById(payload.expenses || []);
 
   const totalVentas = sales.reduce((acc, s) => acc + (s.ingresos || 0), 0);
   const totalGanancia = sales.reduce((acc, s) => acc + (s.ganancia || 0), 0);
@@ -374,6 +379,32 @@ export async function syncAllDataToSheets(
       : []),
   ];
 
+  // Cleanly clear existing data rows so old deleted rows don't leave phantom records
+  try {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchClear`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ranges: [
+            'Resumen General!A1:D25',
+            'Ventas!A2:Z2000',
+            'Compras!A2:Z2000',
+            'Inventario!A2:Z2000',
+            'Clientes!A2:Z2000',
+            'Gastos!A2:Z2000',
+          ],
+        }),
+      }
+    );
+  } catch (e) {
+    console.warn('batchClear non-fatal warning:', e);
+  }
+
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
     {
@@ -390,6 +421,10 @@ export async function syncAllDataToSheets(
   );
 
   if (!res.ok) {
+    if (res.status === 401) {
+      cachedAccessToken = null;
+      throw new Error('La sesión de Google ha expirado por seguridad. Haga clic en renovar sesión para sincronizar sin perder ningún dato.');
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Error ${res.status} al sincronizar datos con Google Sheets`);
   }

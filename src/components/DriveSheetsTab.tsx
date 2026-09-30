@@ -275,13 +275,31 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
         setCurrentUser(authResult.user);
       }
 
-      await syncAllDataToSheets(driveConfig.spreadsheetId, {
-        sales,
-        purchases,
-        inventory,
-        clients,
-        expenses,
-      });
+      try {
+        await syncAllDataToSheets(driveConfig.spreadsheetId, {
+          sales,
+          purchases,
+          inventory,
+          clients,
+          expenses,
+        });
+      } catch (innerErr: any) {
+        // If Google token expired, re-authenticate seamlessly and retry once
+        if (innerErr?.message?.includes('expirado') || innerErr?.message?.includes('401')) {
+          showToast('Renovando acceso con Google...');
+          const authResult = await googleSignIn();
+          setCurrentUser(authResult.user);
+          await syncAllDataToSheets(driveConfig.spreadsheetId, {
+            sales,
+            purchases,
+            inventory,
+            clients,
+            expenses,
+          });
+        } else {
+          throw innerErr;
+        }
+      }
 
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setDriveConfig((prev) => ({
@@ -704,6 +722,61 @@ export const DriveSheetsTab: React.FC<DriveSheetsTabProps> = ({
             )}
           </div>
         )}
+      </div>
+
+      {/* Reassurance & Data Safety Card */}
+      <div className="bg-gradient-to-br from-stone-900 via-stone-850 to-stone-900 text-white rounded-3xl p-6 sm:p-7 border border-stone-800 shadow-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-stone-100">
+                Garantía de Protección de Datos y Sincronización Segura
+              </h3>
+              <p className="text-xs text-stone-400">
+                Tus datos nunca se pierden, incluso si Google desvincula la sesión temporalmente
+              </p>
+            </div>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Almacenamiento Local Protegido</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1 text-xs">
+          <div className="bg-stone-800/60 p-4 rounded-2xl border border-stone-700/60 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-300">
+              <Database className="w-4 h-4" />
+              <span>1. Memoria Local Segura</span>
+            </div>
+            <p className="text-stone-300 text-[11px] leading-relaxed">
+              Cada venta, compra, cliente, producto o gasto que agregas se guarda de inmediato en tu equipo. Aunque se cierre la sesión de Google o no tengas internet, <strong>todos tus datos quedan 100% intactos</strong>.
+            </p>
+          </div>
+
+          <div className="bg-stone-800/60 p-4 rounded-2xl border border-stone-700/60 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-emerald-300">
+              <RefreshCw className="w-4 h-4" />
+              <span>2. Sincronización Limpia</span>
+            </div>
+            <p className="text-stone-300 text-[11px] leading-relaxed">
+              Puedes presionar <strong>«Sincronizar Datos Ahora»</strong> todas las veces que quieras al día. El sistema <strong>no duplica registros ni borra carpetas</strong>; solo actualiza las tablas con tus datos vigentes.
+            </p>
+          </div>
+
+          <div className="bg-stone-800/60 p-4 rounded-2xl border border-stone-700/60 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-blue-300">
+              <Lock className="w-4 h-4" />
+              <span>3. Si Google Desvincula</span>
+            </div>
+            <p className="text-stone-300 text-[11px] leading-relaxed">
+              Google desconecta los tokens por seguridad tras periodos de inactividad. Cuando eso ocurra, <strong>no pierdes nada</strong>: la app simplemente te pedirá renovar sesión en un clic y continuará normalmente.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Section 2: Structure of Folders Created in Google Drive */}

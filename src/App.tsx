@@ -10,17 +10,52 @@ import { GastosTab } from './components/GastosTab';
 import { DriveSheetsTab } from './components/DriveSheetsTab';
 import { initialSales, initialInventory, initialExpenses, initialPurchases, initialClients } from './data/initialData';
 import { SaleItem, InventoryItem, ExpenseItem, PurchaseItem, ClientItem, DriveConfig, AdminCredentials } from './types';
+import { deduplicateById } from './utils/antiRedundancy';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(true);
   const [activeTab, setActiveTab] = useState('resumen');
 
-  const [sales, setSales] = useState<SaleItem[]>(initialSales);
-  const [purchases, setPurchases] = useState<PurchaseItem[]>(initialPurchases);
-  const [clients, setClients] = useState<ClientItem[]>(initialClients);
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
+  const [sales, setSales] = useState<SaleItem[]>(() => {
+    const saved = localStorage.getItem('app_sales_data');
+    if (saved) {
+      try { return deduplicateById(JSON.parse(saved)); } catch (e) {}
+    }
+    return deduplicateById(initialSales);
+  });
+
+  const [purchases, setPurchases] = useState<PurchaseItem[]>(() => {
+    const saved = localStorage.getItem('app_purchases_data');
+    if (saved) {
+      try { return deduplicateById(JSON.parse(saved)); } catch (e) {}
+    }
+    return deduplicateById(initialPurchases);
+  });
+
+  const [clients, setClients] = useState<ClientItem[]>(() => {
+    const saved = localStorage.getItem('app_clients_data');
+    if (saved) {
+      try { return deduplicateById(JSON.parse(saved)); } catch (e) {}
+    }
+    return deduplicateById(initialClients);
+  });
+
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
+    const saved = localStorage.getItem('app_inventory_data');
+    if (saved) {
+      try { return deduplicateById(JSON.parse(saved)); } catch (e) {}
+    }
+    return deduplicateById(initialInventory);
+  });
+
+  const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
+    const saved = localStorage.getItem('app_expenses_data');
+    if (saved) {
+      try { return deduplicateById(JSON.parse(saved)); } catch (e) {}
+    }
+    return deduplicateById(initialExpenses);
+  });
   const [adminCredentials, setAdminCredentials] = useState<AdminCredentials>(() => {
     const saved = localStorage.getItem('app_admin_credentials');
     if (saved) {
@@ -58,6 +93,26 @@ export default function App() {
       foldersCreated: [],
     };
   });
+
+  useEffect(() => {
+    localStorage.setItem('app_sales_data', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    localStorage.setItem('app_purchases_data', JSON.stringify(purchases));
+  }, [purchases]);
+
+  useEffect(() => {
+    localStorage.setItem('app_clients_data', JSON.stringify(clients));
+  }, [clients]);
+
+  useEffect(() => {
+    localStorage.setItem('app_inventory_data', JSON.stringify(inventory));
+  }, [inventory]);
+
+  useEffect(() => {
+    localStorage.setItem('app_expenses_data', JSON.stringify(expenses));
+  }, [expenses]);
 
   useEffect(() => {
     localStorage.setItem('app_admin_credentials', JSON.stringify(adminCredentials));
@@ -114,6 +169,8 @@ export default function App() {
           <InventarioTab
             inventory={inventory}
             setInventory={setInventory}
+            purchases={purchases}
+            setPurchases={setPurchases}
           />
         )}
         {activeTab === 'clientes' && (

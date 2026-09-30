@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SaleItem, InventoryItem } from '../types';
-import { Plus, Trash2, Edit3, ShoppingCart, Search, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Edit3, ShoppingCart, Search, FileSpreadsheet, AlertTriangle, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface VentasTabProps {
   sales: SaleItem[];
@@ -12,6 +12,9 @@ interface VentasTabProps {
 export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory, setInventory }) => {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form state
   const [selectedProduct, setSelectedProduct] = useState(inventory[0]?.producto || '');
@@ -21,21 +24,81 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
   const [notas, setNotas] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
-    setSelectedProduct(inventory[0]?.producto || '');
+    setFormError(null);
+    const firstProd = inventory[0];
+    setSelectedProduct(firstProd?.producto || '');
     setCantidad(1);
-    setPrecioVentaUnit(inventory[0]?.precioVenta || 180);
+    setPrecioVentaUnit(firstProd?.precioVenta || 180);
     setOtrosGastos(0);
     setNotas('');
     setShowModal(true);
   };
 
+  const handleOpenEdit = (s: SaleItem) => {
+    setEditingId(s.id);
+    setFormError(null);
+    setSelectedProduct(s.producto);
+    setCantidad(s.cantidad);
+    setPrecioVentaUnit(s.precioVentaUnit);
+    setOtrosGastos(s.otrosGastos);
+    setNotas(s.notas || '');
+    setShowModal(true);
+  };
+
+  const handleProductChange = (prodName: string) => {
+    setSelectedProduct(prodName);
+    const found = inventory.find((i) => i.producto === prodName);
+    if (found) {
+      setPrecioVentaUnit(found.precioVenta);
+    }
+  };
+
   const handleSaveSale = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const invItem = inventory.find((i) => i.producto === selectedProduct);
-    const costoUnit = invItem ? invItem.costoUnitario : 100;
-    const categoria = invItem ? invItem.categoria : 'General';
+    if (!invItem) {
+      setFormError('Debe seleccionar un producto válido que exista en el Inventario.');
+      return;
+    }
+
+    if (cantidad <= 0) {
+      setFormError('La cantidad vendida debe ser de al menos 1 pieza.');
+      return;
+    }
+
+    // Check stock available if new sale or increasing quantity
+    if (!editingId && cantidad > invItem.piezasDisponible) {
+      setFormError(
+        `⚠️ Redundancia / Stock insuficiente: Solo cuenta con ${invItem.piezasDisponible} piezas disponibles de "${selectedProduct}". No se puede registrar una venta que exceda el stock real.`
+      );
+      return;
+    }
+
+    if (editingId) {
+      const oldSale = sales.find((s) => s.id === editingId);
+      const diff = cantidad - (oldSale?.cantidad || 0);
+      if (diff > invItem.piezasDisponible) {
+        setFormError(
+          `⚠️ Stock insuficiente: Requiere ${diff} piezas adicionales, pero solo hay ${invItem.piezasDisponible} disponibles.`
+        );
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    setFormError(null);
+
+    const costoUnit = invItem.costoUnitario || 100;
+    const categoria = invItem.categoria || 'General';
     
     const ingresos = cantidad * precioVentaUnit;
     const costoMercancia = cantidad * costoUnit;
@@ -43,21 +106,46 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
     const margen = ingresos > 0 ? (ganancia / ingresos) * 100 : 0;
 
     if (editingId) {
-      setSales(sales.map(s => s.id === editingId ? {
-        ...s,
-        producto: selectedProduct,
-        categoria,
-        cantidad,
-        costoUnitario: costoUnit,
-        precioVentaUnit,
-        piezasVendidas: cantidad,
-        ingresos,
-        costoMercancia,
-        otrosGastos,
-        ganancia,
-        margen,
-        notas,
-      } : s));
+      const oldSale = sales.find((s) => s.id === editingId);
+      const qtyDiff = cantidad - (oldSale?.cantidad || 0);
+
+      setSales(
+        sales.map((s) =>
+          s.id === editingId
+            ? {
+                ...s,
+                producto: selectedProduct,
+                categoria,
+                cantidad,
+                costoUnitario: costoUnit,
+                precioVentaUnit,
+                piezasVendidas: cantidad,
+                ingresos,
+                costoMercancia,
+                otrosGastos,
+                ganancia,
+                margen,
+                notas,
+              }
+            : s
+        )
+      );
+
+      // Adjust inventory by difference
+      if (qtyDiff !== 0) {
+        setInventory(
+          inventory.map((i) =>
+            i.producto === selectedProduct
+              ? {
+                  ...i,
+                  piezasVendidas: i.piezasVendidas + qtyDiff,
+                  piezasDisponible: Math.max(0, i.piezasDisponible - qtyDiff),
+                }
+              : i
+          )
+        );
+      }
+      showToast('Venta actualizada y stock recalculado.');
     } else {
       const newSale: SaleItem = {
         id: `sale-${Date.now()}`,
@@ -77,21 +165,48 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
       };
       setSales([newSale, ...sales]);
 
-      // Update inventory stock
-      if (invItem) {
-        setInventory(inventory.map(i => i.producto === selectedProduct ? {
-          ...i,
-          piezasVendidas: i.piezasVendidas + cantidad,
-          piezasDisponible: Math.max(0, i.piezasDisponible - cantidad),
-        } : i));
-      }
+      // Deduct stock cleanly
+      setInventory(
+        inventory.map((i) =>
+          i.producto === selectedProduct
+            ? {
+                ...i,
+                piezasVendidas: i.piezasVendidas + cantidad,
+                piezasDisponible: Math.max(0, i.piezasDisponible - cantidad),
+              }
+            : i
+        )
+      );
+      showToast(`¡Venta de ${cantidad} piezas registrada con éxito!`);
     }
 
+    setIsSubmitting(false);
     setShowModal(false);
   };
 
   const handleDelete = (id: string) => {
-    setSales(sales.filter(s => s.id !== id));
+    const saleToDelete = sales.find((s) => s.id === id);
+    if (
+      confirm(
+        `¿Desea anular esta venta de ${saleToDelete?.cantidad || ''} piezas de "${saleToDelete?.producto}"? Las piezas se restituirán automáticamente al inventario.`
+      )
+    ) {
+      if (saleToDelete) {
+        setInventory((prev) =>
+          prev.map((item) =>
+            item.producto === saleToDelete.producto
+              ? {
+                  ...item,
+                  piezasVendidas: Math.max(0, item.piezasVendidas - saleToDelete.cantidad),
+                  piezasDisponible: item.piezasDisponible + saleToDelete.cantidad,
+                }
+              : item
+          )
+        );
+      }
+      setSales(sales.filter((s) => s.id !== id));
+      showToast('Venta anulada y existencias devueltas al inventario.');
+    }
   };
 
   const filteredSales = sales.filter(s => 
@@ -125,6 +240,16 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
             <Plus className="w-5 h-5" />
             <span>Nueva Venta</span>
           </button>
+        </div>
+      </div>
+
+      {/* Anti-Redundancy Protection Badge */}
+      <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-amber-900">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+          <span>
+            <strong>Control de Stock & Anti-Duplicados:</strong> El sistema valida en tiempo real la disponibilidad en inventario para evitar ventas que superen el stock real. Al anular una venta, las piezas regresan a bodega automáticamente sin pérdidas ni redundancias.
+          </span>
         </div>
       </div>
 
@@ -187,9 +312,16 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
+                          onClick={() => handleOpenEdit(s)}
+                          className="p-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl transition"
+                          title="Editar Venta"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleDelete(s.id)}
                           className="p-2 bg-stone-100 hover:bg-red-100 text-stone-600 hover:text-red-700 rounded-xl transition"
-                          title="Eliminar"
+                          title="Anular Venta"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -207,7 +339,21 @@ export const VentasTab: React.FC<VentasTabProps> = ({ sales, setSales, inventory
       {showModal && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-amber-100 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold text-stone-800 mb-4">Registrar Nueva Venta</h3>
+            <h3 className="text-xl font-bold text-stone-800 mb-2">
+              {editingId ? 'Editar Venta' : 'Registrar Nueva Venta'}
+            </h3>
+            <p className="text-xs text-stone-500 mb-4">
+              {editingId
+                ? 'Modifique los datos de la venta. El stock se ajustará según la diferencia.'
+                : 'Seleccione el producto. El sistema verificará que exista stock suficiente.'}
+            </p>
+
+            {formError && (
+              <div className="mb-4 bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded-2xl text-xs flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{formError}</span>
+              </div>
+            )}
             
             <form onSubmit={handleSaveSale} className="space-y-4">
               <div>
