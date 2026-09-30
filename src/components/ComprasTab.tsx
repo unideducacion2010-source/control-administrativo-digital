@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PurchaseItem, InventoryItem } from '../types';
-import { Truck, Plus, Trash2, Edit3, Search, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Truck, Plus, Trash2, Edit3, Search, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
 import { normalizeText } from '../utils/antiRedundancy';
 
 interface ComprasTabProps {
@@ -22,6 +22,25 @@ export const ComprasTab: React.FC<ComprasTabProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Detect orphaned purchases: purchases whose products no longer exist in the Inventory
+  const orphanedPurchases = purchases.filter(
+    (p) => !inventory.some((inv) => normalizeText(inv.producto) === normalizeText(p.producto))
+  );
+
+  const handleCleanOrphanedPurchases = () => {
+    if (orphanedPurchases.length === 0) {
+      showToast('✅ Las Compras ya están 100% coordinadas con el Inventario.');
+      return;
+    }
+    const count = orphanedPurchases.length;
+    setPurchases((prev) =>
+      prev.filter((p) =>
+        inventory.some((inv) => normalizeText(inv.producto) === normalizeText(p.producto))
+      )
+    );
+    showToast(`✅ Se eliminaron ${count} compras de productos que ya no existen en Inventario.`);
+  };
 
   const [proveedor, setProveedor] = useState('');
   const [producto, setProducto] = useState(inventory[0]?.producto || '');
@@ -296,14 +315,52 @@ export const ComprasTab: React.FC<ComprasTabProps> = ({
             </p>
           </div>
         </div>
-        <button
-          onClick={handleOpenAdd}
-          className="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-md shadow-purple-600/20 transition active:scale-95 flex items-center justify-center gap-2 text-sm"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nueva Compra</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          <button
+            onClick={handleCleanOrphanedPurchases}
+            title="Reconciliar compras con el catálogo de inventario"
+            className="px-4 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 text-xs border border-stone-200"
+          >
+            <RefreshCw className="w-4 h-4 text-stone-600" />
+            <span>Reconciliar con Inventario</span>
+          </button>
+          <button
+            onClick={handleOpenAdd}
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-md shadow-purple-600/20 transition active:scale-95 flex items-center justify-center gap-2 text-sm"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nueva Compra</span>
+          </button>
+        </div>
       </div>
+
+      {/* Orphaned Purchases Warning & Quick Fix Banner */}
+      {orphanedPurchases.length > 0 && (
+        <div className="bg-purple-100 border border-purple-300 text-purple-950 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-purple-200 rounded-xl text-purple-900 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-purple-900">
+                Se detectaron {orphanedPurchases.length} compra(s) registradas de productos que fueron eliminados de Inventario:
+              </p>
+              <p className="text-purple-800 mt-1 font-medium">
+                {Array.from(new Set(orphanedPurchases.map((p) => p.producto))).join(', ')}
+              </p>
+              <p className="text-stone-600 text-[11px] mt-0.5">
+                Al no existir ya estos productos en tu catálogo, puedes limpiar estas compras asociadas con un solo clic.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCleanOrphanedPurchases}
+            className="w-full sm:w-auto px-5 py-2.5 bg-purple-900 hover:bg-black text-white font-bold rounded-xl shadow-xs transition active:scale-95 text-xs whitespace-nowrap shrink-0"
+          >
+            Limpiar Compras de Productos Eliminados
+          </button>
+        </div>
+      )}
 
       {/* Anti-Redundancy Protection Badge */}
       <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-purple-900">

@@ -236,10 +236,19 @@ export const InventarioTab: React.FC<InventarioTabProps> = ({
 
   const handleDelete = (id: string) => {
     const item = inventory.find((i) => i.id === id);
-    if (confirm(`¿Desea eliminar "${item?.producto || 'este producto'}" del inventario?`)) {
-      setInventory(inventory.filter((i) => i.id !== id));
-      showToast('Producto eliminado del inventario.');
+    if (!item) return;
+
+    const cleanName = normalizeText(item.producto);
+
+    // 1. Remove from inventory
+    setInventory((prev) => prev.filter((i) => i.id !== id));
+
+    // 2. Also remove all purchases of this product to maintain 100% synchronization
+    if (setPurchases) {
+      setPurchases((prev) => prev.filter((p) => normalizeText(p.producto) !== cleanName));
     }
+
+    showToast(`Producto "${item.producto}" y sus compras asociadas eliminados correctamente.`);
   };
 
   const filteredInventory = inventory.filter(
