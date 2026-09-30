@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "SaleItem": {
+      "title": "SaleItem",
+      "description": "Registro de una venta realizada",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fecha": { "type": "string" },
+        "producto": { "type": "string" },
+        "categoria": { "type": "string" },
+        "cantidad": { "type": "number" },
+        "costoUnitario": { "type": "number" },
+        "precioVentaUnit": { "type": "number" },
+        "piezasVendidas": { "type": "number" },
+        "ingresos": { "type": "number" },
+        "costoMercancia": { "type": "number" },
+        "otrosGastos": { "type": "number" },
+        "ganancia": { "type": "number" },
+        "margen": { "type": "number" },
+        "notas": { "type": "string" }
+      },
+      "required": ["id", "fecha", "producto", "cantidad", "precioVentaUnit", "ingresos"]
+    },
+    "PurchaseItem": {
+      "title": "PurchaseItem",
+      "description": "Registro de una compra o lote de insumos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fecha": { "type": "string" },
+        "proveedor": { "type": "string" },
+        "producto": { "type": "string" },
+        "categoria": { "type": "string" },
+        "cantidad": { "type": "number" },
+        "costoUnitario": { "type": "number" },
+        "totalInvertido": { "type": "number" },
+        "estado": { "type": "string" },
+        "notas": { "type": "string" }
+      },
+      "required": ["id", "fecha", "proveedor", "producto", "cantidad", "costoUnitario", "totalInvertido"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Ficha de producto en inventario",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "producto": { "type": "string" },
+        "categoria": { "type": "string" },
+        "piezasCompradas": { "type": "number" },
+        "costoUnitario": { "type": "number" },
+        "inversion": { "type": "number" },
+        "piezasVendidas": { "type": "number" },
+        "piezasDisponible": { "type": "number" },
+        "precioVenta": { "type": "number" },
+        "gananciaPorPieza": { "type": "number" },
+        "gananciaPotencial": { "type": "number" }
+      },
+      "required": ["id", "producto", "costoUnitario", "piezasDisponible", "precioVenta"]
+    },
+    "ClientItem": {
+      "title": "ClientItem",
+      "description": "Ficha de cliente",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "telefono": { "type": "string" },
+        "correo": { "type": "string" },
+        "direccion": { "type": "string" },
+        "totalCompras": { "type": "number" },
+        "ultimaCompra": { "type": "string" },
+        "notas": { "type": "string" }
+      },
+      "required": ["id", "nombre"]
+    },
+    "ExpenseItem": {
+      "title": "ExpenseItem",
+      "description": "Registro de gasto operativo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fecha": { "type": "string" },
+        "concepto": { "type": "string" },
+        "tipo": { "type": "string" },
+        "monto": { "type": "number" },
+        "notas": { "type": "string" }
+      },
+      "required": ["id", "fecha", "concepto", "monto"]
+    },
+    "AppData": {
+      "title": "AppData",
+      "description": "Estado consolidado de la aplicación para sincronización entre dispositivos",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string" },
+        "sales": { "type": "array" },
+        "purchases": { "type": "array" },
+        "inventory": { "type": "array" },
+        "clients": { "type": "array" },
+        "expenses": { "type": "array" }
+      },
+      "required": ["updatedAt"]
+    }
+  },
+  "firestore": {
+    "/app_state/{docId}": {
+      "schema": "AppData",
+      "description": "Documento central de sincronización en tiempo real para PC y celular"
+    },
+    "/sales/{saleId}": {
+      "schema": "SaleItem",
+      "description": "Colección individual de ventas"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": "PurchaseItem",
+      "description": "Colección individual de compras"
+    },
+    "/inventory/{inventoryId}": {
+      "schema": "InventoryItem",
+      "description": "Colección individual de inventario"
+    },
+    "/clients/{clientId}": {
+      "schema": "ClientItem",
+      "description": "Colección individual de clientes"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "ExpenseItem",
+      "description": "Colección individual de gastos"
+    }
+  }
+}
