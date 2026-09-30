@@ -214,28 +214,52 @@ export const ComprasTab: React.FC<ComprasTabProps> = ({
 
   const handleDelete = (id: string) => {
     const purchaseToDelete = purchases.find((p) => p.id === id);
-    if (
-      confirm(
-        `¿Desea anular esta compra de ${purchaseToDelete?.cantidad || ''} piezas a "${purchaseToDelete?.proveedor}"? Las piezas recibidas se descontarán del inventario para mantener coherencia.`
-      )
-    ) {
-      if (purchaseToDelete && purchaseToDelete.estado === 'Recibido') {
-        setInventory((prev) =>
-          prev.map((item) =>
-            normalizeText(item.producto) === normalizeText(purchaseToDelete.producto)
-              ? {
-                  ...item,
-                  piezasCompradas: Math.max(0, item.piezasCompradas - purchaseToDelete.cantidad),
-                  piezasDisponible: Math.max(0, item.piezasDisponible - purchaseToDelete.cantidad),
-                  inversion: Math.max(0, item.inversion - purchaseToDelete.totalInvertido),
-                }
-              : item
-          )
-        );
-      }
-      setPurchases(purchases.filter((p) => p.id !== id));
-      showToast('Compra eliminada e inventario ajustado.');
+    if (!purchaseToDelete) return;
+
+    const cleanProd = normalizeText(purchaseToDelete.producto);
+    const remainingPurchasesForProd = purchases.filter(
+      (p) => p.id !== id && normalizeText(p.producto) === cleanProd && p.estado === 'Recibido'
+    );
+
+    // 1. Remove the purchase from purchases state
+    setPurchases(purchases.filter((p) => p.id !== id));
+
+    // 2. Adjust or remove the product from inventory
+    if (purchaseToDelete.estado === 'Recibido') {
+      setInventory((prev) => {
+        // If no remaining purchases and no sales, completely remove the product from inventory
+        if (remainingPurchasesForProd.length === 0) {
+          return prev.filter((item) => {
+            if (normalizeText(item.producto) === cleanProd) {
+              return item.piezasVendidas > 0; // only keep if it has sales history
+            }
+            return true;
+          });
+        }
+
+        // If there are other purchases of this product, recalculate stock and investment
+        const totalQty = remainingPurchasesForProd.reduce((sum, p) => sum + p.cantidad, 0);
+        const totalInv = remainingPurchasesForProd.reduce((sum, p) => sum + p.totalInvertido, 0);
+        const latestCost = remainingPurchasesForProd[0]?.costoUnitario || 0;
+
+        return prev.map((item) => {
+          if (normalizeText(item.producto) === cleanProd) {
+            const avail = Math.max(0, totalQty - item.piezasVendidas);
+            return {
+              ...item,
+              piezasCompradas: totalQty,
+              costoUnitario: latestCost,
+              inversion: totalInv,
+              piezasDisponible: avail,
+              gananciaPotencial: avail * (item.precioVenta - latestCost),
+            };
+          }
+          return item;
+        });
+      });
     }
+
+    showToast(`Compra de "${purchaseToDelete.producto}" eliminada y removida/ajustada del Inventario.`);
   };
 
   const filteredPurchases = purchases.filter(

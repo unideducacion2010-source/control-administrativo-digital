@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InventoryItem, PurchaseItem } from '../types';
-import { Package, Plus, Trash2, Edit3, Search, Truck, ArrowUpRight, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { findDuplicateProduct } from '../utils/antiRedundancy';
+import { Package, Plus, Trash2, Edit3, Search, Truck, ArrowUpRight, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { findDuplicateProduct, normalizeText } from '../utils/antiRedundancy';
 
 interface InventarioTabProps {
   inventory: InventoryItem[];
@@ -22,6 +22,33 @@ export const InventarioTab: React.FC<InventarioTabProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Detect orphaned products: products in inventory whose purchases were deleted and have no sales
+  const orphanedProducts = inventory.filter(
+    (item) =>
+      !purchases.some(
+        (p) => p.estado === 'Recibido' && normalizeText(p.producto) === normalizeText(item.producto)
+      ) && item.piezasVendidas === 0
+  );
+
+  const handleCleanOrphanedProducts = () => {
+    if (orphanedProducts.length === 0) {
+      showToast('✅ El Inventario ya está 100% coordinado con las Compras.');
+      return;
+    }
+    const names = orphanedProducts.map((p) => `"${p.producto}"`).join(', ');
+    setInventory((prev) =>
+      prev.filter(
+        (item) =>
+          purchases.some(
+            (p) =>
+              p.estado === 'Recibido' &&
+              normalizeText(p.producto) === normalizeText(item.producto)
+          ) || item.piezasVendidas > 0
+      )
+    );
+    showToast(`✅ Se eliminaron del inventario los productos sin compras: ${names}`);
+  };
 
   // Form state for new/edit product
   const [producto, setProducto] = useState('');
@@ -248,14 +275,52 @@ export const InventarioTab: React.FC<InventarioTabProps> = ({
             </p>
           </div>
         </div>
-        <button
-          onClick={handleOpenAdd}
-          className="w-full sm:w-auto px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl shadow-md shadow-orange-600/20 transition active:scale-95 flex items-center justify-center gap-2 text-sm"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nuevo Producto</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          <button
+            onClick={handleCleanOrphanedProducts}
+            title="Reconciliar catálogo con compras vigentes"
+            className="px-4 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 text-xs border border-stone-200"
+          >
+            <RefreshCw className="w-4 h-4 text-stone-600" />
+            <span>Reconciliar con Compras</span>
+          </button>
+          <button
+            onClick={handleOpenAdd}
+            className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-2xl shadow-md shadow-orange-600/20 transition active:scale-95 flex items-center justify-center gap-2 text-sm"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nuevo Producto</span>
+          </button>
+        </div>
       </div>
+
+      {/* Orphaned Products Warning & Quick Fix Banner */}
+      {orphanedProducts.length > 0 && (
+        <div className="bg-amber-100 border border-amber-300 text-amber-950 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-200 rounded-xl text-amber-900 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-amber-900">
+                Se detectaron {orphanedProducts.length} producto(s) en Inventario cuyas compras fueron eliminadas:
+              </p>
+              <p className="text-amber-800 mt-1 font-medium">
+                {orphanedProducts.map((p) => p.producto).join(', ')}
+              </p>
+              <p className="text-stone-600 text-[11px] mt-0.5">
+                Al haber borrado las compras de estos productos, ya no tienen existencias ni facturas activas.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCleanOrphanedProducts}
+            className="w-full sm:w-auto px-5 py-2.5 bg-amber-900 hover:bg-black text-white font-bold rounded-xl shadow-xs transition active:scale-95 text-xs whitespace-nowrap shrink-0"
+          >
+            Eliminar del Inventario Ahora
+          </button>
+        </div>
+      )}
 
       {/* Synchronized Banner Tip */}
       <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-stone-700">
